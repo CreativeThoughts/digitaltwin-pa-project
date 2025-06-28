@@ -1,0 +1,690 @@
+openapi: 3.0.3
+info:
+  title: Agentic AI Solution API
+  description: |
+    Multi-agent orchestration system using AutoGen framework for intelligent request processing.
+    
+    This API provides endpoints for:
+    - Health monitoring
+    - Request submission and processing
+    - Response retrieval
+    - Agent status monitoring
+    
+    The system orchestrates multiple expert agents (Financial Health, Utility Management, Vehicle Management)
+    through a principal agent that coordinates responses and performs quality checks.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@agentic-ai.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.agentic-ai.com
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health check and monitoring endpoints
+  - name: Requests
+    description: Request submission and processing endpoints
+  - name: Responses
+    description: Response retrieval endpoints
+  - name: Agents
+    description: Agent status and management endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health Check
+      description: Check the health status of the API service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                timestamp: "2025-06-28T17:00:00Z"
+                version: "1.0.0"
+        '500':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /process:
+    post:
+      tags:
+        - Requests
+      summary: Process Request Directly
+      description: |
+        Process a request directly and return the result immediately.
+        This endpoint bypasses the async processing queue.
+      operationId: processRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestModel'
+            example:
+              request_id: "req_123"
+              user_id: "user_456"
+              request_type: "general"
+              description: "Please analyze my overall situation and provide recommendations"
+              priority: "medium"
+              metadata:
+                source: "web"
+                session_id: "sess_789"
+      responses:
+        '200':
+          description: Request processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrincipalAgentResponseModel'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/request:
+    post:
+      tags:
+        - Requests
+      summary: Submit Request for Processing
+      description: |
+        Submit a new request for asynchronous processing by the agentic system.
+        Returns an immediate acknowledgment while processing continues in the background.
+      operationId: submitRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestModel'
+            examples:
+              general_request:
+                summary: General Analysis Request
+                value:
+                  request_id: "req_123"
+                  user_id: "user_456"
+                  request_type: "general"
+                  description: "Please provide a comprehensive analysis of my situation"
+                  priority: "medium"
+              financial_request:
+                summary: Financial Health Request
+                value:
+                  request_id: "req_124"
+                  user_id: "user_456"
+                  request_type: "financial_health"
+                  description: "Analyze my financial health and provide recommendations"
+                  priority: "high"
+              utility_request:
+                summary: Utility Management Request
+                value:
+                  request_id: "req_125"
+                  user_id: "user_456"
+                  request_type: "utility_management"
+                  description: "Help optimize my utility usage and costs"
+                  priority: "medium"
+              vehicle_request:
+                summary: Vehicle Management Request
+                value:
+                  request_id: "req_126"
+                  user_id: "user_456"
+                  request_type: "vehicle_management"
+                  description: "Provide vehicle maintenance and optimization advice"
+                  priority: "low"
+      responses:
+        '200':
+          description: Request accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseModel'
+              example:
+                request_id: "req_123"
+                status: "accepted"
+                message: "Request accepted for processing. Processing ID: 97be1a16-45bd-4c32-a693-f2e0f1b123ea"
+                timestamp: "2025-06-28T17:00:00Z"
+                processing_id: "97be1a16-45bd-4c32-a693-f2e0f1b123ea"
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/responses:
+    get:
+      tags:
+        - Responses
+      summary: Get Recent Responses
+      description: Retrieve recent responses from the file streamer
+      operationId: getResponses
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of responses to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+          example: 50
+      responses:
+        '200':
+          description: List of recent responses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  responses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        processing_id:
+                          type: string
+                          format: uuid
+                        request_id:
+                          type: string
+                        user_id:
+                          type: string
+                        request_type:
+                          type: string
+                        status:
+                          type: string
+                        result:
+                          type: object
+                        processing_time:
+                          type: number
+                        timestamp:
+                          type: string
+                          format: date-time
+                        error:
+                          type: string
+                  count:
+                    type: integer
+              example:
+                responses:
+                  - processing_id: "97be1a16-45bd-4c32-a693-f2e0f1b123ea"
+                    request_id: "req_123"
+                    user_id: "user_456"
+                    request_type: "general"
+                    status: "completed"
+                    result:
+                      principal_agent: "PrincipalAgent"
+                      expert_results:
+                        financial: "Financial analysis completed"
+                        utility: "Utility analysis completed"
+                        vehicle: "Vehicle analysis completed"
+                    processing_time: 2.5
+                    timestamp: "2025-06-28T17:00:00Z"
+                count: 1
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/agents/status:
+    get:
+      tags:
+        - Agents
+      summary: Get Agents Status
+      description: Get the status of all registered agents in the system
+      operationId: getAgentsStatus
+      responses:
+        '200':
+          description: Agent status information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  is_initialized:
+                    type: boolean
+                  expert_agents:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        is_initialized:
+                          type: boolean
+                        domain:
+                          type: string
+                  publication_queue_size:
+                    type: integer
+              example:
+                name: "PrincipalAgent"
+                is_initialized: true
+                expert_agents:
+                  financial:
+                    name: "FinancialHealthExpert"
+                    is_initialized: true
+                    domain: "financial_health"
+                  utility:
+                    name: "UtilityManagementExpert"
+                    is_initialized: true
+                    domain: "utility_management"
+                  vehicle:
+                    name: "VehicleManagementExpert"
+                    is_initialized: true
+                    domain: "vehicle_management"
+                publication_queue_size: 0
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestType:
+      type: string
+      enum:
+        - utility_management
+        - financial_health
+        - vehicle_management
+        - general
+      description: Type of request to be processed
+
+    Priority:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+      description: Priority level of the request
+      default: medium
+
+    RequestModel:
+      type: object
+      required:
+        - request_id
+        - user_id
+        - request_type
+        - description
+      properties:
+        request_id:
+          type: string
+          description: Unique identifier for the request
+          example: "req_123"
+        user_id:
+          type: string
+          description: Identifier of the user making the request
+          example: "user_456"
+        request_type:
+          $ref: '#/components/schemas/RequestType'
+        description:
+          type: string
+          description: Detailed description of the request
+          example: "Please analyze my financial situation and provide recommendations"
+        priority:
+          $ref: '#/components/schemas/Priority'
+        metadata:
+          type: object
+          description: Additional metadata
+          additionalProperties: true
+          example:
+            source: "web"
+            session_id: "sess_789"
+
+    ResponseModel:
+      type: object
+      required:
+        - request_id
+        - status
+        - message
+        - timestamp
+      properties:
+        request_id:
+          type: string
+          description: Request ID that was processed
+          example: "req_123"
+        status:
+          type: string
+          description: Status of the request processing
+          example: "accepted"
+        message:
+          type: string
+          description: Response message
+          example: "Request accepted for processing"
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the response
+          example: "2025-06-28T17:00:00Z"
+        processing_id:
+          type: string
+          format: uuid
+          description: Internal processing ID
+          example: "97be1a16-45bd-4c32-a693-f2e0f1b123ea"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          description: Service status
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: Current timestamp
+          example: "2025-06-28T17:00:00Z"
+        version:
+          type: string
+          description: API version
+          example: "1.0.0"
+
+    QualityMetricModel:
+      type: object
+      required:
+        - dimension
+        - score
+        - weight
+        - description
+        - issues
+        - recommendations
+      properties:
+        dimension:
+          type: string
+          description: Quality dimension name
+          example: "completeness"
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Quality score for this dimension
+          example: 0.85
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Weight of this dimension in overall score
+          example: 0.3
+        description:
+          type: string
+          description: Description of the quality dimension
+          example: "Completeness of the analysis"
+        issues:
+          type: array
+          items:
+            type: string
+          description: List of issues found
+          example: ["Missing cost analysis", "No timeline provided"]
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: List of recommendations for improvement
+          example: ["Include cost analysis", "Add implementation timeline"]
+
+    QualityReportModel:
+      type: object
+      required:
+        - agent_name
+        - request_id
+        - overall_score
+        - quality_level
+        - metrics
+        - summary
+        - timestamp
+        - passed_threshold
+        - approved_for_publication
+        - total_issues
+        - total_recommendations
+      properties:
+        agent_name:
+          type: string
+          description: Name of the agent that generated this report
+          example: "FinancialHealthExpert"
+        request_id:
+          type: string
+          description: Request ID this report is for
+          example: "req_123"
+        overall_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Overall quality score
+          example: 0.82
+        quality_level:
+          type: string
+          description: Quality level classification
+          example: "good"
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualityMetricModel'
+        summary:
+          type: string
+          description: Summary of the quality assessment
+          example: "Overall good quality with room for improvement in completeness"
+        timestamp:
+          type: string
+          format: date-time
+          description: When the quality assessment was performed
+          example: "2025-06-28T17:00:00Z"
+        passed_threshold:
+          type: boolean
+          description: Whether the response passed quality thresholds
+          example: true
+        approved_for_publication:
+          type: boolean
+          description: Whether the response is approved for publication
+          example: true
+        total_issues:
+          type: integer
+          description: Total number of issues found
+          example: 2
+        total_recommendations:
+          type: integer
+          description: Total number of recommendations provided
+          example: 3
+
+    AgentResultModel:
+      type: object
+      properties:
+        analysis_type:
+          type: string
+          description: Type of analysis performed
+          example: "financial_health_analysis"
+        key_issues:
+          type: array
+          items:
+            type: string
+          description: Key issues identified
+          example: ["High debt-to-income ratio", "Insufficient emergency fund"]
+        optimization_opportunities:
+          type: array
+          items:
+            type: string
+          description: Opportunities for optimization
+          example: ["Reduce discretionary spending", "Increase savings rate"]
+        cost_savings_recommendations:
+          type: array
+          items:
+            type: string
+          description: Recommendations for cost savings
+          example: ["Switch to cheaper insurance", "Refinance high-interest debt"]
+        implementation_steps:
+          type: array
+          items:
+            type: string
+          description: Steps to implement recommendations
+          example: ["Contact insurance providers", "Review loan options"]
+        expected_benefits:
+          type: array
+          items:
+            type: string
+          description: Expected benefits of implementation
+          example: ["$500 monthly savings", "Improved credit score"]
+        technology_recommendations:
+          type: array
+          items:
+            type: string
+          description: Technology-related recommendations
+          example: ["Use budgeting apps", "Enable automatic savings"]
+        priority_level:
+          type: string
+          description: Priority level for implementation
+          example: "high"
+        estimated_savings:
+          type: string
+          description: Estimated savings amount
+          example: "$6,000 annually"
+        implementation_timeline:
+          type: string
+          description: Timeline for implementation
+          example: "3-6 months"
+        quality_report:
+          $ref: '#/components/schemas/QualityReportModel'
+
+    PrincipalAgentResponseModel:
+      type: object
+      required:
+        - request_id
+        - processing_time
+        - principal_agent
+        - expert_results
+        - quality_assessments
+        - synthesis
+        - final_quality_report
+        - approved_for_publication
+        - publication_status
+      properties:
+        request_id:
+          type: string
+          description: Request ID that was processed
+          example: "req_123"
+        processing_time:
+          type: number
+          format: float
+          description: Total processing time in seconds
+          example: 2.5
+        principal_agent:
+          type: string
+          description: Name of the principal agent
+          example: "PrincipalAgent"
+        expert_results:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/AgentResultModel'
+          description: Results from each expert agent
+        quality_assessments:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/QualityReportModel'
+          description: Quality assessments for each expert response
+        synthesis:
+          type: object
+          additionalProperties: true
+          description: Synthesized final response
+        final_quality_report:
+          $ref: '#/components/schemas/QualityReportModel'
+        approved_for_publication:
+          type: boolean
+          description: Whether the final response is approved for publication
+          example: true
+        publication_status:
+          type: string
+          description: Status of publication
+          example: "published"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: "An error occurred while processing the request"
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  oneOf:
+                    - type: string
+                    - type: integer
+              msg:
+                type: string
+              type:
+                type: string
+          description: Validation error details
+          example:
+            - loc: ["body", "request_type"]
+              msg: "value is not a valid enumeration member; permitted: 'utility_management', 'financial_health', 'vehicle_management', 'general'"
+              type: "enum"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+security:
+  - ApiKeyAuth: []
+
+externalDocs:
+  description: Find more info about the Agentic AI Solution
+  url: https://github.com/your-org/agentic-ai-solution 

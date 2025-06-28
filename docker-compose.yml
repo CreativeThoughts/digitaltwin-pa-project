@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  agentic-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentic-ai-solution
+    ports:
+      - "8000:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=INFO
+      - OUTPUT_FILE_PATH=/app/output/responses.json
+      - MAX_CONVERSATION_TURNS=10
+      - TIMEOUT=60
+    volumes:
+      - ./output:/app/output
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - agentic-network
+
+networks:
+  agentic-network:
+    driver: bridge 
