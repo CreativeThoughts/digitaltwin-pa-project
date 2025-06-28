@@ -1,6 +1,6 @@
 import os
 from typing import Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,9 +25,10 @@ class Settings(BaseSettings):
     max_conversation_turns: int = int(os.getenv("MAX_CONVERSATION_TURNS", "10"))
     timeout: int = int(os.getenv("TIMEOUT", "60"))
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False
+    )
 
 # Global settings instance
 settings = Settings() 
