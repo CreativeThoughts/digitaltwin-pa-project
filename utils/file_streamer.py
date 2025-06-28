@@ -1,7 +1,7 @@
 import json
 import aiofiles
 import asyncio
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Any
 from pathlib import Path
 from utils.logger import logger
@@ -32,7 +32,7 @@ class FileStreamer:
         """
         try:
             # Add timestamp to response
-            response_data["timestamp"] = datetime.utcnow().isoformat()
+            response_data["timestamp"] = datetime.now(UTC).isoformat()
             
             # Read existing data if file exists
             existing_data = []
@@ -68,7 +68,7 @@ class FileStreamer:
         """
         try:
             # Add timestamp to response
-            response_data["timestamp"] = datetime.utcnow().isoformat()
+            response_data["timestamp"] = datetime.now(UTC).isoformat()
             
             # Read existing data if file exists
             existing_data = []

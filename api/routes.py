@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks, APIRouter
-from datetime import datetime
+from datetime import datetime, UTC
 import uuid
 from typing import Dict, Any
+from contextlib import asynccontextmanager
 
 from api.models import (
     RequestModel, 
@@ -14,21 +15,15 @@ from agents.principal_agent import PrincipalAgent
 from utils.logger import logger
 from utils.file_streamer import file_streamer
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Agentic AI Solution",
-    description="Multi-agent orchestration system using AutoGen framework",
-    version="1.0.0"
-)
-
 # Initialize principal agent
 principal_agent = PrincipalAgent()
 
 router = APIRouter()
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize components on startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup
     try:
         logger.info("Starting Agentic AI Solution...")
         logger.info("Initializing principal agent...")
@@ -52,18 +47,26 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Error during startup: {e}")
         raise
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown."""
+    
+    yield
+    
+    # Shutdown
     logger.info("Shutting down Agentic AI Solution...")
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Agentic AI Solution",
+    description="Multi-agent orchestration system using AutoGen framework",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         version="1.0.0"
     )
 
@@ -104,7 +107,7 @@ async def submit_request(
             request_id=request.request_id,
             status="accepted",
             message=f"Request accepted for processing. Processing ID: {processing_id}",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             processing_id=processing_id
         )
         
@@ -144,7 +147,7 @@ async def process_request_async(request_data: Dict[str, Any], processing_id: str
             "status": "completed",
             "result": result,
             "processing_time": result.get("processing_time", 0),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }
         
         # Write response to file streamer
@@ -163,7 +166,7 @@ async def process_request_async(request_data: Dict[str, Any], processing_id: str
             "request_type": request_data["request_type"],
             "status": "error",
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }
         
         await file_streamer.write_response(error_response)
