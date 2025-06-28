@@ -137,6 +137,61 @@ The solution includes smart deployment scripts:
 - **Load testing** capabilities
 - **Integration testing** with AWS services
 
+## 🚀 CI/CD Pipeline: GitHub Actions + AWS ECR/ECS
+
+This project uses **GitHub Actions** for automated CI/CD, building and deploying Docker images to AWS ECS for both staging and production environments.
+
+### Workflow Overview
+
+- **CI**: Lint, test, and coverage on every push/PR (`.github/workflows/ci.yml`)
+- **CD**:  
+  - On push to `main`:
+    - Build and push Docker image to AWS ECR
+    - Deploy to ECS **staging** automatically
+    - Deploy to ECS **production** after manual approval
+
+### AWS & GitHub Setup
+
+#### 1. AWS Resources Needed
+- **ECR repository** for Docker images
+- **ECS cluster** and **services** for staging and production
+- **Task definition** with a container named `app`
+- **IAM user** with permissions for ECR/ECS
+
+#### 2. GitHub Environments & Secrets
+
+Go to **GitHub → Settings → Environments** and create:
+- `staging`
+- `production`
+
+For each environment, add these secrets:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION` (e.g., `us-east-1`)
+- `ECR_REPOSITORY` (e.g., `123456789012.dkr.ecr.us-east-1.amazonaws.com/digitaltwin-pa`)
+- `ECS_CLUSTER` (e.g., `digitaltwin-pa-cluster`)
+- `ECS_SERVICE` (e.g., `digitaltwin-pa-staging-service` or `digitaltwin-pa-production-service`)
+- `ECS_TASK_DEFINITION` (task definition family or ARN)
+- (Optional for prod) `PRODUCTION_URL` (public URL for your production app)
+
+#### 3. How Deployment Works
+
+- **Staging**:  
+  Every push to `main` automatically deploys the latest image to the staging ECS service.
+
+- **Production**:  
+  After a successful staging deploy, a manual approval step appears in the Actions tab. Once approved, the same image is deployed to production.
+
+#### 4. Manual Approval
+
+To deploy to production, go to the Actions tab, select the latest workflow run, and approve the "Wait for approval before deploying to production" step.
+
+#### 5. Customization
+
+- Adjust container name in `.github/workflows/cd.yml` if not `app`
+- Add Slack/email notifications as needed
+- Add health checks, migrations, or other steps as required
+
 ## Installation
 
 ### Local Development
