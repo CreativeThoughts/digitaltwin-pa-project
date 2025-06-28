@@ -75,7 +75,6 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: ${{ secrets.PRODUCTION_URL }}
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Wait for approval before deploying to production
